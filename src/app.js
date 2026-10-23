@@ -3,6 +3,7 @@ const cors = require("cors");
 const helmet = require("helmet");
 
 const healthRoutes = require("./routes/healthRoutes");
+const authRoutes = require("./routes/authRoutes");
 const itemsRoutes = require("./routes/itemsRoutes");
 
 const app = express();
@@ -18,9 +19,9 @@ app.use(
 app.use(express.json({ limit: "1mb" }));
 
 app.use("/api/health", healthRoutes);
+app.use("/api/auth", authRoutes);
 app.use("/api/items", itemsRoutes);
 
-// 404 for routes that do not exist.
 app.use((req, res, next) => {
   const error = new Error(
     `Route not found: ${req.method} ${req.originalUrl}`
@@ -30,7 +31,6 @@ app.use((req, res, next) => {
   next(error);
 });
 
-// Centralized error handler. It must remain last.
 app.use((err, req, res, next) => {
   if (res.headersSent) {
     return next(err);
@@ -52,10 +52,10 @@ app.use((err, req, res, next) => {
 
   if (statusCode >= 500) {
     console.error(err);
-  }
 
-  if (process.env.NODE_ENV === "production" && statusCode >= 500) {
-    message = "Internal server error";
+    if (process.env.NODE_ENV === "production") {
+      message = "Internal server error";
+    }
   }
 
   return res.status(statusCode).json({
