@@ -3,26 +3,24 @@ const cors = require("cors");
 const helmet = require("helmet");
 
 const healthRoutes = require("./routes/healthRoutes");
+const itemsRoutes = require("./routes/itemsRoutes");
 
 const app = express();
 
-// Security-related HTTP headers.
 app.use(helmet());
 
-// Allow the configured frontend origin.
 app.use(
   cors({
     origin: process.env.CLIENT_ORIGIN || "http://localhost:5173"
   })
 );
 
-// Parse incoming JSON request bodies.
 app.use(express.json({ limit: "1mb" }));
 
-// API routes.
 app.use("/api/health", healthRoutes);
+app.use("/api/items", itemsRoutes);
 
-// Handle unknown routes.
+// 404 for routes that do not exist.
 app.use((req, res, next) => {
   const error = new Error(
     `Route not found: ${req.method} ${req.originalUrl}`
@@ -32,18 +30,33 @@ app.use((req, res, next) => {
   next(error);
 });
 
-// Centralized error handler. Keep this last.
+// Centralized error handler. It must remain last.
 app.use((err, req, res, next) => {
   if (res.headersSent) {
     return next(err);
   }
 
-  const statusCode = err.statusCode || err.status || 500;
+  let statusCode = err.statusCode || err.status || 500;
+  let message = err.message || "Internal server error";
 
-  const message =
-    process.env.NODE_ENV === "production" && statusCode >= 500
-      ? "Internal server error"
-      : err.message || "Internal server error";
+  if (err.code === "23505") {
+    statusCode = 409;
+    message = "A record with this value already exists";
+  } else if (err.code === "23503") {
+    statusCode = 400;
+    message = "The referenced category does not exist";
+  } else if (err.code === "23514") {
+    statusCode = 400;
+    message = "Data violates a database constraint";
+  }
+
+  if (statusCode >= 500) {
+    console.error(err);
+  }
+
+  if (process.env.NODE_ENV === "production" && statusCode >= 500) {
+    message = "Internal server error";
+  }
 
   return res.status(statusCode).json({
     success: false,
