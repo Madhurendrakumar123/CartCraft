@@ -1,52 +1,59 @@
 const { rateLimit } = require("express-rate-limit");
 
-const loginLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "Too many login attempts. Please try again later."
-  }
-});
+function createLimiter(windowMs, limit, message) {
+  return rateLimit({
+    windowMs,
+    limit,
+    standardHeaders: true,
+    legacyHeaders: false,
+    message: {
+      success: false,
+      message
+    }
+  });
+}
 
-const registerLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  limit: 5,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "Too many registration attempts. Please try again later."
-  }
-});
+const loginLimiter = createLimiter(
+  15 * 60 * 1000,
+  10,
+  "Too many login attempts. Please try again later."
+);
 
-const verifyEmailLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000,
-  limit: 10,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "Too many verification attempts. Try again later."
-  }
-});
+const registerLimiter = createLimiter(
+  60 * 60 * 1000,
+  5,
+  "Too many registration attempts. Please try again later."
+);
 
-const resendVerificationLimiter = rateLimit({
-  windowMs: 60 * 60 * 1000,
-  limit: 3,
-  standardHeaders: true,
-  legacyHeaders: false,
-  message: {
-    success: false,
-    message: "Too many verification requests. Try again later."
-  }
-});
+const verifyEmailLimiter = createLimiter(
+  15 * 60 * 1000,
+  10,
+  "Too many verification attempts. Try again later."
+);
+
+const resendVerificationLimiter = createLimiter(
+  60 * 60 * 1000,
+  3,
+  "Too many verification requests. Try again later."
+);
+
+const forgotPasswordLimiter = createLimiter(
+  60 * 60 * 1000,
+  5,
+  "Too many password reset requests. Try again later."
+);
+
+const resetPasswordLimiter = createLimiter(
+  15 * 60 * 1000,
+  10,
+  "Too many reset attempts. Please try again later."
+);
 
 module.exports = {
   loginLimiter,
   registerLimiter,
   verifyEmailLimiter,
-  resendVerificationLimiter
+  resendVerificationLimiter,
+  forgotPasswordLimiter,
+  resetPasswordLimiter
 };

@@ -9,6 +9,7 @@ async function findByEmail(email) {
        email,
        password_hash AS "passwordHash",
        role,
+       token_version AS "tokenVersion",
        is_verified AS "isVerified",
        created_at AS "createdAt"
      FROM users

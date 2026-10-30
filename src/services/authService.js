@@ -60,7 +60,7 @@ function createAccessToken(user) {
   }
 
   return jwt.sign(
-    { role: user.role },
+    { role: user.role, ver: Number(user.tokenVersion) },
     secret,
     {
       subject: String(user.id),

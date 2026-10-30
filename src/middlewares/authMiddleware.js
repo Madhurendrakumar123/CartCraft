@@ -1,6 +1,7 @@
 const jwt = require("jsonwebtoken");
+const sessionRepository = require("../repositories/sessionRepository");
 
-function protect(req, res, next) {
+async function protect(req, res, next) {
   const authorization = req.headers.authorization;
 
   if (!authorization || !authorization.startsWith("Bearer ")) {
@@ -10,29 +11,54 @@ function protect(req, res, next) {
     });
   }
 
-  const token = authorization.slice("Bearer ".length);
+  let payload;
 
   try {
-    const payload = jwt.verify(token, process.env.JWT_SECRET);
-
-    if (!payload.sub || !["customer", "admin"].includes(payload.role)) {
-      return res.status(401).json({
-        success: false,
-        message: "Invalid access token"
-      });
-    }
-
-    req.user = {
-      id: String(payload.sub),
-      role: payload.role
-    };
-
-    return next();
-  } catch (error) {
+    payload = jwt.verify(
+      authorization.slice("Bearer ".length),
+      process.env.JWT_SECRET
+    );
+  } catch {
     return res.status(401).json({
       success: false,
       message: "Invalid or expired access token"
     });
+  }
+
+  if (
+    !payload.sub ||
+    !Number.isInteger(payload.ver) ||
+    !["customer", "admin"].includes(payload.role)
+  ) {
+    return res.status(401).json({
+      success: false,
+      message: "Invalid access token"
+    });
+  }
+
+  try {
+    const currentUser =
+      await sessionRepository.findAccessStateById(payload.sub);
+
+    if (
+      !currentUser ||
+      Number(currentUser.tokenVersion) !== payload.ver
+    ) {
+      return res.status(401).json({
+        success: false,
+        message: "Session invalidated. Please log in again."
+      });
+    }
+
+    // Use the current database role, not a potentially stale JWT role.
+    req.user = {
+      id: String(currentUser.id),
+      role: currentUser.role
+    };
+
+    return next();
+  } catch (error) {
+    return next(error);
   }
 }
 
